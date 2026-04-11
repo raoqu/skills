@@ -1,6 +1,6 @@
 ---
 name: migrate-code-to-go
-description: Use this skill to iteratively migrate non-Go codebases, especially Python or TypeScript projects, into Go with a reusable plan, dependency migration notes, validation steps, and repeatable checkpoint-based execution across multiple turns.
+description: Use this skill to iteratively migrate non-Go codebases, especially Python or TypeScript projects, into Go with a reusable plan, dependency migration notes, validation steps, repeatable checkpoint-based execution across multiple turns, and per-step migration records under go_migration/steps.
 ---
 
 # Migrate Code to Go
@@ -22,7 +22,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 ## 执行原则
 
 1. 先理解原项目，再决定迁移顺序，不要直接大面积改写。
-2. 永远保持“可继续执行”的状态：本轮结束前更新计划、依赖记录、验证记录。
+2. 永远保持“可继续执行”的状态：本轮结束前更新计划、依赖记录、验证记录，以及必要的步骤记录。
 3. 优先迁移边界清晰、验证容易的节点，避免同时改动太多模块。
 4. 对外部行为保持兼容优先：
    - 输入输出契约
@@ -32,6 +32,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
    - 数据库 schema 与迁移路径
 5. 当上下文不足时，只做当前计划节点所需的最小读取，不重新分析全仓。
 6. 若发现之前计划错误，先更新计划文档和节点状态，再执行代码修改。
+7. 每当某个计划节点或子节点在本轮被明确完成，立即在 `go_migration/steps/` 写一份独立迁移记录；未完成节点只更新 `progress.md`，不要伪造完成记录。
 
 ## 首次执行
 
@@ -42,6 +43,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 - `dependency-mapping.md`
 - `validation.md`
 - `progress.md`
+- `steps/`
 
 如果原项目目录下已经存在 `go_migration/`，先复用并检查里面的计划、进度和 Go 工程状态，而不是重新选一个目录。
 
@@ -51,6 +53,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 - [references/dependency-migration-log-template.md](references/dependency-migration-log-template.md)
 - [references/validation-checklist.md](references/validation-checklist.md)
 - [references/execution-loop.md](references/execution-loop.md)
+- [references/step-record-template.md](references/step-record-template.md)
 
 首次执行的最小流程：
 
@@ -65,6 +68,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 5. 在 `go_migration/dependency-mapping.md` 建立依赖映射，先记录高风险三方库。
 6. 在 `go_migration/validation.md` 定义每类节点的验证方式。
 7. 在 `go_migration/progress.md` 记录当前阶段、已完成节点、阻塞点和下一步。
+8. 建立 `go_migration/steps/`，后续每轮节点完成后都在这里追加带时间戳的迁移记录。
 
 ## 重复执行循环
 
@@ -80,10 +84,34 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 4. 只迁移与当前节点相关的原始目录。原项目下可能有很多其他源码目录、资源目录或历史产物目录；除非计划节点明确要求，不要把它们纳入当前迁移范围。
 5. 实施当前节点迁移，新写或改动的 Go 代码统一放在 `go_migration/` 下，不顺手扩散到其他未计划节点。
 6. 执行对应验证。
-7. 更新 `go_migration/progress.md`、`go_migration/plan.md` 节点状态，以及必要的依赖映射记录。
-8. 明确写出下一次调用本 skill 应该继续的节点编号。
+7. 若本轮完成了计划节点或子节点，在 `go_migration/steps/` 新增一份以日期和时间标识的迁移记录；记录中必须包含：
+   - 本次迁移对应计划中的哪一部分
+   - 分析过程和变更范围
+   - 相对于原项目差异性较大的变更
+   - 遗留问题和风险
+8. 更新 `go_migration/progress.md`、`go_migration/plan.md` 节点状态，以及必要的依赖映射记录。
+9. 明确写出下一次调用本 skill 应该继续的节点编号。
 
-详细循环约束见 [references/execution-loop.md](references/execution-loop.md)。
+详细循环约束见 [references/execution-loop.md](references/execution-loop.md)。步骤记录模板见 [references/step-record-template.md](references/step-record-template.md)。
+
+## 步骤记录要求
+
+每一份 `go_migration/steps/` 记录都使用稳定、可排序的文件名，推荐格式：`YYYYMMDD-HHMMSS-<node-id>.md`，例如 `20260411-153045-P2.1.md`。
+
+记录至少包含：
+
+- 记录时间
+- 对应计划节点编号与标题
+- 本轮迁移目标
+- 分析过程
+- 变更范围
+- 与原项目相比差异较大的设计或行为变化
+- 验证结果
+- 遗留问题
+- 风险判断
+- 下一步建议
+
+如果一次完成多个紧密相关的子节点，可以写一份合并记录，但必须在标题和正文中明确覆盖的节点编号。
 
 ## 节点设计规则
 
@@ -144,6 +172,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 
 - 新的 Go 项目目录名固定为原项目根目录下的 `go_migration/`
 - 所有新增 Go 代码、Go 模块文件、迁移中间产物文档都放在 `go_migration/` 下
+- `go_migration/steps/` 专门保存单轮迁移完成记录，不要把这类记录混进 `progress.md`
 - 不要假设原项目只有一套源码目录；先识别本轮节点实际对应的源目录，再做映射
 - 如果原项目存在多个候选子系统，先在 `go_migration/plan.md` 明确当前迁移目标，再动代码
 - 除非用户明确要求原地替换，否则不要直接覆盖原语言实现；优先保持原实现与 `go_migration/` 并存
@@ -167,6 +196,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 - 做了哪些代码或文档修改
 - 执行了哪些验证，结果如何
 - 更新了哪些依赖映射
+- 若生成了步骤记录，记录文件路径
 - 下轮应继续的节点编号
 
 如果未完成当前节点，也要明确：
