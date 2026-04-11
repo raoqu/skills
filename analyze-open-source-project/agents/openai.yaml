@@ -1,0 +1,4 @@
+interface:
+  display_name: "Analyze Open Source Project"
+  short_description: "Analyze OSS repos and write structured docs"
+  default_prompt: "Use $analyze-open-source-project to inspect this repository and create the required analysis documents under doc/."
