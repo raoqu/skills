@@ -1,0 +1,4 @@
+interface:
+  display_name: "Recommend Software Architecture"
+  short_description: "Analyze repo architecture and write actionable recommendations"
+  default_prompt: "Use $recommend-software-architecture to inspect this repository and write concrete architecture recommendations under doc/."
