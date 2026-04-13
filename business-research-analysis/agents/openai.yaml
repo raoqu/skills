@@ -1,0 +1,4 @@
+interface:
+  display_name: "Business Research Analysis"
+  short_description: "Research business context and write analysis docs"
+  default_prompt: "Use $business-research-analysis to research this business topic and write REQUEST.md and OUTPUT.md under docs/business/."
