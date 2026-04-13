@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review Go Migration"
+  short_description: "Review Go migration coverage with recursive module maps"
+  default_prompt: "Use $review-go-migration to build or extend the migration review module tree, record source entry points, and inspect a chosen module in depth."
