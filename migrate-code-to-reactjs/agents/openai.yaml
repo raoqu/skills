@@ -1,0 +1,4 @@
+interface:
+  display_name: "Migrate Code to ReactJS"
+  short_description: "Staged frontend migration into React, TypeScript, and Vite"
+  default_prompt: "Use $migrate-code-to-reactjs to plan or continue migrating this frontend project into a pnpm, TypeScript, React, and Vite stack."
