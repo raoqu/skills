@@ -16,6 +16,8 @@
 - 入口点：
 - 关键模块：
 - 运行环境：
+- 运行时角色边界：`server-only` / `shared` / `browser-only` / `build-time`
+- 混合框架边界：API / SSR / UI / middleware / worker / build
 - 外部系统：
 - 高风险区域：
 - 需要沉淀分析文档的模块：
@@ -25,6 +27,7 @@
 - 原项目核心目录 / 模块：
 - Go 目录 / package 映射：
 - 明确保留的原始结构语义：
+- 明确保留或延后的浏览器端 / 构建期目录：
 - 允许偏离原结构的地方及原因：
 
 ## 节点列表
@@ -57,6 +60,7 @@
 ## 目录边界说明
 
 - 原项目实际迁移源目录：
+- 当前纳入 Go 迁移的 Node/SSR 服务端目录：
 - 本轮明确忽略的目录：
 - Go 实现统一写入：`go_migration/`
 - 分析文档目录：`go_migration/docs/analysis/`

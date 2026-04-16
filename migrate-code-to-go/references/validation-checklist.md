@@ -26,6 +26,15 @@
 - 请求参数校验一致
 - 响应结构、字段命名、默认值一致
 - 中间件行为一致：认证、日志、追踪、限流、超时
+- headers、cookies、redirect、cache-control、streaming、multipart 行为一致
+
+## Node / SSR / 混合框架
+
+- 是否先区分了 `server-only`、`shared`、`browser-only`、`build-time`，避免把浏览器代码误算作 Go 迁移完成
+- 对 Next.js 或类似框架，`app/api/`、`pages/api/`、server actions、middleware、SSR 数据获取、client components 的边界是否已在计划中写清
+- 若本轮替换的是 SSR 或 BFF，HTML/JSON、鉴权、cookie、重定向、缓存失效和中间件顺序是否对齐
+- 若保留原前端，前后端拆分后的接口、静态资源、部署路径和环境变量注入是否已验证
+- 若涉及 ISR、SSG 或增量缓存，是否验证了缓存刷新、预热和静态资源落地路径
 
 ## CLI / 批处理
 

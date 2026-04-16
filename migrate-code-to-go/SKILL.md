@@ -1,28 +1,29 @@
 ---
 name: migrate-code-to-go
-description: Use this skill to iteratively migrate non-Go codebases, especially Python, JavaScript/TypeScript, or Java projects, into Go. It supports staged multi-turn migrations with reusable plan/progress checkpoints, source-language best practices, dependency mapping, optional module analysis docs under go_migration/docs/analysis, and reset-progress archiving under go_migration/docs/history.
+description: Use this skill to iteratively migrate non-Go codebases, especially Python, Node.js/JavaScript/TypeScript, or Java projects, into Go. It supports staged multi-turn migrations for backends, CLIs, workers, and server-side modules from hybrid frameworks such as Next.js, with reusable plan/progress checkpoints, source-language best practices, dependency mapping, optional module analysis docs under go_migration/docs/analysis, and reset-progress archiving under go_migration/docs/history.
 ---
 
 # Migrate Code to Go
 
-将现有非 Go 项目逐步迁移为 Go，重点支持 Python、JavaScript/TypeScript、Java 或混合仓库。这个 skill 面向多轮迁移：先沉淀计划、分析和依赖决策，再按稳定节点实现、验证、记录，避免每一轮都重新理解整个原项目。
+将现有非 Go 项目逐步迁移为 Go，重点支持 Python、Node.js/JavaScript/TypeScript、Java 或混合仓库。这个 skill 面向多轮迁移：先沉淀计划、分析和依赖决策，再按稳定节点实现、验证、记录，避免每一轮都重新理解整个原项目。对 Node.js 应用，尤其是 Next.js 这类混合 SSR/BFF 框架，默认迁移服务端运行时与可复用逻辑，不默认重写浏览器 UI。
 
 ## 执行原则
 
 1. 先固定迁移边界、模块映射和验证方式，再写 Go 代码。
 2. 让迁移后的 Go 目录尽可能贴近原项目的逻辑分层与文件组织；只在 Go 生态约定明显更合适时才偏离，并记录原因。
-3. 永远保持“可继续执行”的状态：本轮结束前更新计划、进度、依赖记录，以及必要的分析文档和步骤记录。
-4. 优先迁移边界清晰、验证容易的节点，避免同时改动太多模块。
-5. 对外部行为保持兼容优先：
+3. 如果源项目同时包含浏览器 UI 与 Node.js 服务端运行时，例如 Next.js 或其他混合框架，先把模块拆分成 `server-only`、`shared`、`browser-only`、`build-time` 四类；默认只迁移服务端与可复用共享逻辑，浏览器 UI 只有在计划明确要求时才迁入 Go 交付。
+4. 永远保持“可继续执行”的状态：本轮结束前更新计划、进度、依赖记录，以及必要的分析文档和步骤记录。
+5. 优先迁移边界清晰、验证容易的节点，避免同时改动太多模块。
+6. 对外部行为保持兼容优先：
    - 输入输出契约
    - 错误语义
    - 配置项
    - API/CLI/消息格式
    - 数据库 schema 与迁移路径
-6. 对单独复杂模块或功能，优先评估成熟的第三方 Go 库是否能显著降低目标项目复杂度；对简单功能迁移，避免为了“生态对齐”引入额外依赖。
-7. 当上下文不足时，只做当前计划节点所需的最小读取，不重新分析全仓。
-8. 若发现之前计划错误，先更新计划文档和节点状态，再执行代码修改。
-9. 每当某个计划节点或子节点在本轮被明确完成，立即在 `go_migration/steps/` 写一份独立迁移记录；未完成节点只更新 `progress.md`，不要伪造完成记录。
+7. 对单独复杂模块或功能，优先评估成熟的第三方 Go 库是否能显著降低目标项目复杂度；对简单功能迁移，避免为了“生态对齐”引入额外依赖。
+8. 当上下文不足时，只做当前计划节点所需的最小读取，不重新分析全仓。
+9. 若发现之前计划错误，先更新计划文档和节点状态，再执行代码修改。
+10. 每当某个计划节点或子节点在本轮被明确完成，立即在 `go_migration/steps/` 写一份独立迁移记录；未完成节点只更新 `progress.md`，不要伪造完成记录。
 
 ## 首次执行
 
@@ -50,14 +51,15 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 
 首次执行的最小流程：
 
-1. 识别源码语言、入口点、运行方式、测试方式、关键模块、外部依赖；如果是 Python、JavaScript/TypeScript、Java 或混合仓库，读取对应专项参考。
+1. 识别源码语言、框架、入口点、运行方式、测试方式、关键模块、外部依赖，以及模块的运行时角色；如果是 Python、Node.js/JavaScript/TypeScript、Java 或混合仓库，读取对应专项参考。对 Node.js 项目，额外标出 `server-only`、`shared`、`browser-only`、`build-time` 四类模块，以及是否使用 Express、NestJS、Fastify、Next.js 等框架。
 2. 明确迁移输出边界：新的 Go 代码统一写入原项目根目录下的 `go_migration/`，不要混写到原项目其他源码目录。
-3. 先写出“原目录 / 模块 -> Go 目录 / package”的结构映射，尽可能保留原项目的逻辑与文件组织。
+3. 先写出“原目录 / 模块 -> Go 目录 / package”的结构映射，尽可能保留原项目的逻辑与文件组织。对 Next.js 或其他混合框架，额外标明哪些目录迁入 Go，哪些继续保留为浏览器前端或构建链。
 4. 判断迁移策略：
    - 全量替换
    - 并存迁移
    - 按模块绞杀迁移
    - 先适配接口，再替换实现
+   - 先拆 server/runtime 边界，再替换其中一层
 5. 在 `go_migration/plan.md` 建立迁移计划，拆成有序节点，节点编号必须稳定，例如 `P1`、`P2.3`。
 6. 如果项目较大、分析成本高或预计会多次回看原模块，在 `go_migration/docs/analysis/` 为关键模块建立分析文档。
 7. 在 `go_migration/dependency-mapping.md` 建立依赖映射，先记录高风险三方库和复杂模块的 Go 落地策略。
@@ -70,9 +72,20 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 只读取与本轮节点相关的参考文件，避免无关上下文进入窗口：
 
 - Python 项目：读取 [references/python-to-go-best-practices.md](references/python-to-go-best-practices.md)
-- JavaScript/TypeScript 项目：读取 [references/javascript-typescript-to-go-best-practices.md](references/javascript-typescript-to-go-best-practices.md)
+- JavaScript/TypeScript/Node.js 项目：读取 [references/javascript-typescript-to-go-best-practices.md](references/javascript-typescript-to-go-best-practices.md)
+- Next.js 或其他混合 SSR/BFF 框架：同样读取 [references/javascript-typescript-to-go-best-practices.md](references/javascript-typescript-to-go-best-practices.md)，重点关注其中的 Node.js 运行时与混合框架边界规则
 - Java 项目：读取 [references/java-to-go-best-practices.md](references/java-to-go-best-practices.md)
 - 混合仓库：只加载当前节点实际涉及语言的参考，不要整仓同时加载全部语言说明
+
+## Node.js / Next.js 边界规则
+
+当源项目是 Node.js 应用，尤其是 Next.js、Remix、Nuxt 这类混合运行时框架时，先在计划中写清下面几类边界，再开始迁移：
+
+- 默认纳入 Go 迁移范围：API 路由、BFF、SSR 数据加载、鉴权与 session、中间件、后台任务、消息消费者、定时任务、文件处理、纯共享业务逻辑。
+- 默认不纳入 Go 迁移范围：浏览器组件、前端 hooks、DOM 交互、样式系统、前端构建配置、只在构建期执行的脚本；除非用户明确要求以 Go template、HTML 渲染或静态文件生成替换它们。
+- 对 Next.js，先区分 `app/`、`pages/`、`app/api/`、`pages/api/`、`middleware.ts`、server actions、client components、edge runtime 代码，分别决定“迁移到 Go / 保留原样 / 延后处理”。
+- 不要在一个计划节点里同时做“Node 服务替换”和“浏览器 UI 重写”；拆成独立节点。
+- 如果目标是用 Go 取代 Next.js 的服务端能力但保留 React 前端，先把接口、SSR 数据获取、鉴权和部署边界拆清，再决定 API/BFF、SSR HTML、静态资源托管的落地方式。
 
 ## 分析文档要求
 
@@ -220,6 +233,7 @@ description: Use this skill to iteratively migrate non-Go codebases, especially 
 - `go_migration/docs/history/` 用于按日期归档旧 `plan.md` 和 `progress.md`
 - `go_migration/steps/` 专门保存单轮迁移完成记录，不要把这类记录混进 `progress.md`
 - 不要假设原项目只有一套源码目录；先识别本轮节点实际对应的源目录，再做映射
+- 如果原项目是 Node.js/Next.js 混合仓库，只把当前计划节点覆盖的服务端或共享逻辑映射进 `go_migration/`；浏览器 UI 相关目录先在计划中标记为保留、延后或单独迁移
 - 如果原项目存在多个候选子系统，先在 `go_migration/plan.md` 明确当前迁移目标，再动代码
 - 除非用户明确要求原地替换，否则不要直接覆盖原语言实现；优先保持原实现与 `go_migration/` 并存
 
