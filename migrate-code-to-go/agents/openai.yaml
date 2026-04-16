@@ -1,4 +1,4 @@
 interface:
   display_name: "Migrate Code to Go"
-  short_description: "Iterative migration of non-Go codebases into Go"
-  default_prompt: "Use $migrate-code-to-go to continue migrating this project to Go from the next planned node."
+  short_description: "Staged migration of Python/JS/TS/Java apps into Go"
+  default_prompt: "Use $migrate-code-to-go to continue or reset the staged migration of this Python, JavaScript/TypeScript, or Java project into Go from the next planned node."
